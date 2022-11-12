@@ -128,9 +128,9 @@ static void TraceImpl(const char *inFMT, ...)
 //	#pragma comment(lib, "../../Ice/Lib64/IML64.lib")
 
 	#ifdef _DEBUG
-		#pragma comment(lib, "../../../../PEEL_Externals/Jolt/Lib/x64/Debug/Jolt.lib")
+		#pragma comment(lib, "../../../../PEEL_Externals/JoltPhysics/Build/VS2022_CL/Debug/Jolt.lib")
 	#else
-		#pragma comment(lib, "../../../../PEEL_Externals/Jolt/Lib/x64/Release/Jolt.lib")
+		#pragma comment(lib, "../../../../PEEL_Externals/JoltPhysics/Build/VS2022_CL/Distribution/Jolt.lib")
 	#endif
 #else
 	#pragma comment(lib, "../../Ice/Lib/IceCore.lib")

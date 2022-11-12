@@ -43,10 +43,5 @@
 \__tmp__
 *.bak
 
-
-
-
-
-
-
-
+Debug/
+Release/
