@@ -23,7 +23,7 @@
 *.lai
 *.la
 *.a
-*.lib
+#*.lib
 
 # Executables
 # *.exe
@@ -38,6 +38,8 @@
 *.sbr
 *.tlog
 *.user
+*.idb
+*.htm
 
 \.vs
 \__tmp__

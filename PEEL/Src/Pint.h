@@ -182,6 +182,21 @@
 		virtual	void	ModifyContacts(Pint& pint, udword nb_pairs, PintContactModifyProvider& provider)	= 0;
 	};
 
+	// ### experimental
+	struct PintOverride
+	{
+		void	Init()
+		{
+			mNbIter	= INVALID_ID;
+			mSleeping = INVALID_ID;
+			mUseGPU = INVALID_ID;
+		}
+
+		udword	mNbIter;
+		BOOL	mSleeping;
+		BOOL	mUseGPU;
+	};
+
 	//! Contains scene-related parameters. This is used to initialize each PINT engine, *before* the test itself is setup.
 	class PINT_WORLD_CREATE : public Allocateable
 	{
@@ -199,7 +214,8 @@
 //										mFilterCallback				(null),
 										mContactNotifyCallback		(null),
 										mContactModifyCallback		(null),
-										mContactModifyCallback2		(null)
+										mContactModifyCallback2		(null),
+										mOverride					(null)
 									{
 										mGlobalBounds.SetEmpty();
 									}
@@ -232,6 +248,7 @@
 		PintContactNotifyCallback*	mContactNotifyCallback;
 		PintContactModifyCallback*	mContactModifyCallback;
 		PintContactModifyCallback2*	mContactModifyCallback2;
+		PintOverride*				mOverride;
 
 		inline	const char*			GetTestName()	const	{ return mTestName;	}
 //		inline	const char*			GetTestDesc()	const	{ return mTestDesc;	}
@@ -1736,7 +1753,7 @@
 		virtual	udword			GetNbJoints(PintActorHandle handle)						const	{ mPint.NotImplemented("Pint_Actor::GetNbJoints");			return 0;			}
 		virtual	PintJointHandle	GetJoint(PintActorHandle handle, udword index)			const	{ mPint.NotImplemented("Pint_Actor::GetJoint");				return null;		}
 
-		virtual	bool			GetWorldBounds(PintActorHandle handle, AABB& bounds)	const	{ return mPint.NotImplemented("Pint_Actor::GetBounds");							}
+		virtual	bool			GetWorldBounds(PintActorHandle handle, AABB& bounds)	const	{ return mPint.NotImplemented("Pint_Actor::GetWorldBounds");					}
 
 		virtual	void			WakeUp(PintActorHandle handle)									{ mPint.NotImplemented("Pint_Actor::WakeUp");									}
 

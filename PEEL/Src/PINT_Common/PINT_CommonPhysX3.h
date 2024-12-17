@@ -24,6 +24,7 @@
 #include "PINT_CommonPhysX3_Mesh.h"
 #include "PINT_CommonPhysX3_FilterShader.h"
 #include "PINT_CommonPhysX_FoundationAPI.h"
+#include "PINT_CommonPhysX_Names.h"
 
 #ifdef PHYSX_SUPPORT_CHARACTERS2
 	#include "PINT_CommonPhysX3_CCT.h"
@@ -151,42 +152,44 @@
 			return null;
 		}
 
+		inline_	udword	ThreadIndexToNbThreads(udword index)	const
+		{
+			if(index==0)
+				return 0;	// "Single threaded"
+			if(index==1)
+				return 1;	// "1 main + 1 worker thread"
+			if(index==2)
+				return 2;	// "1 main + 2 worker threads"
+			if(index==3)
+				return 3;	// "1 main + 3 worker threads"
+			if(index==4)
+				return 4;	// "1 main + 4 worker threads"
+			if(index==5)
+				return 8;	// "1 main + 8 worker threads"
+			if(index==6)
+				return 12;	// "1 main + 12 worker threads"
+			if(index==7)
+				return 15;	// "1 main + 15 worker threads"
+			return null;
+		}
+
 		inline_	udword	NbThreadsToThreadIndex(udword nb_threads)	const
 		{
 			if(nb_threads==0 || nb_threads==1)
-				return 0;
+				return 0;	// "Single threaded"
 			/*if(nb_threads==0)
 				return 0;
 			if(nb_threads==1)
 				return 1;*/
 			if(nb_threads==2)
-				return 2+1;
+				return 2;		// "1 main + 2 worker threads"
 			if(nb_threads<=4)
-				return 3+1;
+				return 4;		// "1 main + 4 worker threads"
 			if(nb_threads<=8)
-				return 4+1;
-			return 4+1;	// Limited to 8 threads for now
-		}
-
-		inline_	udword	ThreadIndexToNbThreads(udword index)	const
-		{
-			if(index==0)
-				return 0;
-			if(index==1)
-				return 1;
-			if(index==2)
-				return 2;
-			if(index==3)
-				return 3;
-			if(index==4)
-				return 4;
-			if(index==5)
-				return 8;
-			if(index==6)
-				return 12;
-			if(index==7)
-				return 15;
-			return null;
+				return 5;		// "1 main + 8 worker threads"
+			if(nb_threads<=12)
+				return 6;		// "1 main + 12 worker threads"
+			return 7;			// "1 main + 15 worker threads"
 		}
 
 #if PHYSX_SUPPORT_SCRATCH_BUFFER
@@ -196,6 +199,9 @@
 		PxBroadPhaseType::Enum			mBroadPhaseType;
 		udword							mMBPSubdivLevel;
 		float							mMBPRange;
+#endif
+#if PHYSX_SUPPORT_CPU_DISPATCHER_MODE
+		PxDefaultCpuDispatcherWaitForWorkMode::Enum		mCPUDispatcherMode;
 #endif
 		bool							mEnableCCD;
 #if PHYSX_SUPPORT_ANGULAR_CCD
@@ -302,8 +308,12 @@
 		bool							mSQBothSides;
 
 		// Joints
+#if PHYSX_SUPPORT_JOINT_PROJECTION
 		bool							mEnableJointProjection;
+#endif
+#if PHYSX_SUPPORT_JOINT_CONTACT_DISTANCE
 //		bool							mEnableJointContactDistance;
+#endif
 		bool							mUseD6Joint;
 #if PHYSX_SUPPORT_DISABLE_PREPROCESSING
 		bool							mDisablePreprocessing;
@@ -323,7 +333,9 @@
 #ifdef PHYSX_SUPPORT_LINEAR_COEFF
 		float							mLinearCoeff;
 #endif
+#if PHYSX_SUPPORT_JOINT_CONTACT_DISTANCE
 		udword							mLimitsContactDistance;
+#endif
 		// Articulations
 #if PHYSX_SUPPORT_ARTICULATIONS || PHYSX_SUPPORT_RCA
 		bool							mDisableArticulations;
@@ -444,7 +456,8 @@
 #ifndef IS_PHYSX_3_2
 		// PxQueryFilterCallback
 		virtual PxQueryHitType::Enum		preFilter(const PxFilterData& filterData, const PxShape* shape, const PxRigidActor* actor, PxHitFlags& queryFlags)	override;
-		virtual PxQueryHitType::Enum		postFilter(const PxFilterData& filterData, const PxQueryHit& hit)													override;
+		virtual PxQueryHitType::Enum		postFilter(const PxFilterData& filterData, const PxQueryHit& hit, const PxShape* shape, const PxRigidActor* actor)	/*override*/;
+		virtual PxQueryHitType::Enum		postFilter(const PxFilterData& filterData, const PxQueryHit& hit)													/*override*/;
 		//~PxQueryFilterCallback
 #endif
 		virtual	void						SetGravity(const Point& gravity)	override;
@@ -628,10 +641,9 @@
 		inline_	ActorManager&				GetActorManager()			{ return mActorManager;		}
 		inline_	const EditableParams&		GetParams()	const			{ return mParams;			}
 
-//		inline_	Strings&					GetNames()					{ return mNames;			}
-				void						SetActorName(PxRigidActor* actor, const char* name)	{ SetNameT<PxRigidActor>(actor, name);	}
-				void						SetShapeName(PxShape* shape, const char* name)		{ SetNameT<PxShape>(shape, name);		}
-				void						SetJointName(PxJoint* joint, const char* name)		{ SetNameT<PxJoint>(joint, name);		}
+				void						SetActorName(PxRigidActor* actor, const char* name)	{ mNames.SetNameT<PxRigidActor>(actor, name);	}
+				void						SetShapeName(PxShape* shape, const char* name)		{ mNames.SetNameT<PxShape>(shape, name);		}
+				void						SetJointName(PxJoint* joint, const char* name)		{ mNames.SetNameT<PxJoint>(joint, name);		}
 
 		protected:
 				void						SharedUpdateFromUI();
@@ -801,23 +813,7 @@
 
 				Vertices					mDebugVizHelper;
 
-				Strings						mNames;
-				template<class T>
-				void						SetNameT(T* obj, const char* name)
-				{
-					if(!obj)
-						return;
-
-					if(name)
-					{
-						// Make the string persistent
-						// TODO: share strings
-						IceCore::String* S = mNames.AddString(name);
-						name = S->Get();	// Replace non-persistent ptr with persistent ptr
-					}
-
-					obj->setName(name);
-				}
+				Names						mNames;
 	};
 
 	template<class T>
@@ -852,6 +848,7 @@
 		IceWindow*				InitSharedGUI(IceWidget* parent, PintGUIHelper& helper, UICallback& callback);
 		const EditableParams&	GetEditableParams();
 		void					GetOptionsFromGUI(const char* test_name);
+		void					GetOptionsFromOverride(PintOverride* overrideParams);
 		void					CloseSharedGUI();
 		bool					IsDebugVizEnabled();
 	}
@@ -862,8 +859,8 @@
 		shape.setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, params.mSQFlag);
 		shape.setFlag(PxShapeFlag::eVISUALIZATION, debug_viz_flag);
 //		shape.setFlag(PxShapeFlag::eUSE_SWEPT_BOUNDS, gUseCCD);
-		shape.setContactOffset(params.mContactOffset);
 		shape.setRestOffset(params.mRestOffset);
+		shape.setContactOffset(params.mContactOffset);
 //		const float contactOffset = shape.getContactOffset();	// 0.02
 //		const float restOffset = shape.getRestOffset();		// 0.0
 //		printf("contactOffset: %f\n", contactOffset);

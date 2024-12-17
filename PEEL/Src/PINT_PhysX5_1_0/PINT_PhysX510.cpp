@@ -332,6 +332,8 @@ static PEEL_SimulationEventCallback gSimulationEventCallback;
 void PhysX::Init(const PINT_WORLD_CREATE& desc)
 //PintSceneHandle PhysX::Init(const PINT_WORLD_CREATE& desc)
 {
+	PhysX3::GetOptionsFromOverride(desc.mOverride);
+
 #ifdef USE_LOAD_LIBRARY
 /*	udword FPUEnv[256];
 	FillMemory(FPUEnv, 256*4, 0xff);
@@ -415,13 +417,17 @@ void PhysX::Init(const PINT_WORLD_CREATE& desc)
 
 	bool status = PxInitExtensions(*mPhysics, gVisualDebugger);
 	ASSERT(status);
-//	gDefaultCPUDispatcher = PxDefaultCpuDispatcherCreate(mParams.ThreadIndexToNbThreads(mParams.mNbThreadsIndex), null);
-	gDefaultCPUDispatcher = PxDefaultCpuDispatcherCreate(mParams.ThreadIndexToNbThreads(mParams.mNbThreadsIndex), null, PxDefaultCpuDispatcherWaitForWorkMode::eYIELD_THREAD);
+#if PHYSX_SUPPORT_CPU_DISPATCHER_MODE
+	const PxDefaultCpuDispatcherWaitForWorkMode::Enum mode = PxDefaultCpuDispatcherWaitForWorkMode::Enum(mParams.mCPUDispatcherMode);
+	gDefaultCPUDispatcher = PxDefaultCpuDispatcherCreate(mParams.ThreadIndexToNbThreads(mParams.mNbThreadsIndex), null, mode, mode==PxDefaultCpuDispatcherWaitForWorkMode::eYIELD_PROCESSOR ? 8 : 0);
+#else
+	gDefaultCPUDispatcher = PxDefaultCpuDispatcherCreate(mParams.ThreadIndexToNbThreads(mParams.mNbThreadsIndex), null);
+//	gDefaultCPUDispatcher = PxDefaultCpuDispatcherCreate(mParams.ThreadIndexToNbThreads(mParams.mNbThreadsIndex), null, PxDefaultCpuDispatcherWaitForWorkMode::eYIELD_THREAD);
 //	gDefaultCPUDispatcher = PxDefaultCpuDispatcherCreate(16, null);
 
-//	gDispatcher = PxDefaultCpuDispatcherCreate(inNumThreads, NULL, PxDefaultCpuDispatcherWaitForWorkMode::eYIELD_THREAD);
-//	gDispatcher = PxDefaultCpuDispatcherCreate(inNumThreads, NULL, PxDefaultCpuDispatcherWaitForWorkMode::eYIELD_PROCESSOR, 8);
-
+//	gDispatcher = PxDefaultCpuDispatcherCreate(inNumThreads, null, PxDefaultCpuDispatcherWaitForWorkMode::eYIELD_THREAD);
+//	gDispatcher = PxDefaultCpuDispatcherCreate(inNumThreads, null, PxDefaultCpuDispatcherWaitForWorkMode::eYIELD_PROCESSOR, 8);
+#endif
 
 	CreateCooking(scale, PxMeshPreprocessingFlag::eWELD_VERTICES);
 
@@ -471,14 +477,16 @@ void PhysX::Init(const PINT_WORLD_CREATE& desc)
 #endif
 
 			PxCudaContextManagerDesc cudaContextManagerDesc;
+#if PHYSX_SUPPORT_CUDA_GL_INTEROP
 			cudaContextManagerDesc.interopMode = PxCudaInteropMode::OGL_INTEROP;
+#endif
 //printf("Checkpoint 00\n");
 			gCudaContextManager = PxCreateCudaContextManager(*mFoundation, cudaContextManagerDesc, PxGetProfilerCallback());
 //printf("Checkpoint 01\n");
 			if(gCudaContextManager && !gCudaContextManager->contextIsValid())
 			{
 				gCudaContextManager->release();
-				gCudaContextManager = NULL;
+				gCudaContextManager = null;
 			}	
 //			if(gCudaContextManager)
 //				sceneDesc.gpuDispatcher = gCudaContextManager->getGpuDispatcher();	//Set the GPU dispatcher, used by GRB to dispatch CUDA kernels.
@@ -1368,7 +1376,7 @@ void PhysXPlugIn::CloseGUI()												{ PhysX_CloseGUI();						}
 void PhysXPlugIn::Init(const PINT_WORLD_CREATE& desc)						{ PhysX_Init(desc);						}
 void PhysXPlugIn::Close()													{ PhysX_Close();						}
 Pint* PhysXPlugIn::GetPint()												{ return GetPhysX();					}
-const char*	PhysXPlugIn::GetTestGUIName()									{ return "PhysX 5.1i";					}
+const char*	PhysXPlugIn::GetTestGUIName()									{ return "PhysX 5.1.0";					}
 static PhysXPlugIn gPlugIn;
 PintPlugin*	GetPintPlugin()													{ return &gPlugIn;						}
 

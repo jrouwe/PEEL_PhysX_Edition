@@ -456,15 +456,17 @@ static const bool gHingeDriveIsAcceleration = false;
 PintJointHandle SharedPhysX::CreateJoint(PxPhysics& physics, const PINT_JOINT_CREATE& desc)
 {
 	const bool use_d6_joint = mParams.mUseD6Joint;
+#if PHYSX_SUPPORT_JOINT_PROJECTION
 	const bool enable_projection = mParams.mEnableJointProjection;
 	const float projection_linear_tolerance = mParams.mProjectionLinearTolerance;
 	const float projection_angular_tolerance = mParams.mProjectionAngularTolerance * DEGTORAD;
-	const float ContactDistance = GetJointContactDistance(mParams);
-
-	PxRigidActor* actor0 = (PxRigidActor*)desc.mObject0;
-	PxRigidActor* actor1 = (PxRigidActor*)desc.mObject1;
-
 //	projection_angular_tolerance *= DEGTORAD;
+#endif
+#if PHYSX_SUPPORT_JOINT_CONTACT_DISTANCE
+	const float ContactDistance = GetJointContactDistance(mParams);
+#endif
+	PxRigidActor* actor0 = reinterpret_cast<PxRigidActor*>(desc.mObject0);
+	PxRigidActor* actor1 = reinterpret_cast<PxRigidActor*>(desc.mObject1);
 
 	PxJoint* CreatedJoint = null;
 	bool NeedsExtendedLimits = false;
@@ -497,7 +499,9 @@ PintJointHandle SharedPhysX::CreateJoint(PxPhysics& physics, const PINT_JOINT_CR
 					j->setMotion(PxD6Axis::eSWING1, PxD6Motion::eFREE);
 					j->setMotion(PxD6Axis::eSWING2, PxD6Motion::eFREE);
 
+#if PHYSX_SUPPORT_JOINT_PROJECTION
 					SetupD6Projection(j, enable_projection, projection_linear_tolerance, projection_angular_tolerance);
+#endif
 				}
 			}
 			else
@@ -529,7 +533,11 @@ PintJointHandle SharedPhysX::CreateJoint(PxPhysics& physics, const PINT_JOINT_CR
 			const float minLimitAngle = jc.mLimits.mMinValue;
 			const float maxLimitAngle = jc.mLimits.mMaxValue;
 
-			const PxJointAngularLimitPair limit(minLimitAngle, maxLimitAngle, ContactDistance);
+			const PxJointAngularLimitPair limit(minLimitAngle, maxLimitAngle
+#if PHYSX_SUPPORT_JOINT_CONTACT_DISTANCE
+				, ContactDistance
+#endif
+			);
 			const bool IsLimitedHinge = HingeNeedsLimits(minLimitAngle, maxLimitAngle);
 			NeedsExtendedLimits = IsLimitedHinge && (minLimitAngle<=-PI || maxLimitAngle>=PI);
 //			limit.restitution	= 0.0f;
@@ -561,9 +569,9 @@ PintJointHandle SharedPhysX::CreateJoint(PxPhysics& physics, const PINT_JOINT_CR
 					j->setMotion(PxD6Axis::eTWIST, PxD6Motion::eLIMITED);
 					}
 
+#if PHYSX_SUPPORT_JOINT_PROJECTION
 					SetupD6Projection(j, enable_projection, projection_linear_tolerance, projection_angular_tolerance);
-
-
+#endif
 					if(jc.mUseMotor)
 					{
 						const PxD6JointDrive drive(gHingeDriveStiffness, gHingeDriveDamping, gHingeDriveForceLimit, gHingeDriveIsAcceleration);
@@ -654,11 +662,13 @@ PintJointHandle SharedPhysX::CreateJoint(PxPhysics& physics, const PINT_JOINT_CR
 						j->setRevoluteJointFlag(PxRevoluteJointFlag::eLIMIT_ENABLED, true);
 					}
 
+#if PHYSX_SUPPORT_JOINT_PROJECTION
 					if(enable_projection)
 					{
 						j->setProjectionLinearTolerance(projection_linear_tolerance);
 						j->setProjectionAngularTolerance(projection_angular_tolerance);
 					}
+#endif
 	/*
 			PxRevoluteJoint* rv = PxRevoluteJointCreate(physics, b0->mBody, PxTransform::createIdentity(), b1->mBody, PxTransform::createIdentity());
 			mJoints[i] = rv;
@@ -720,7 +730,11 @@ PintJointHandle SharedPhysX::CreateJoint(PxPhysics& physics, const PINT_JOINT_CR
 			const float minLimitAngle = jc.mLimits.mMinValue;
 			const float maxLimitAngle = jc.mLimits.mMaxValue;
 
-			const PxJointAngularLimitPair limit(minLimitAngle, maxLimitAngle, ContactDistance);
+			const PxJointAngularLimitPair limit(minLimitAngle, maxLimitAngle
+#if PHYSX_SUPPORT_JOINT_CONTACT_DISTANCE
+				, ContactDistance
+#endif
+			);
 			const bool IsLimitedHinge = HingeNeedsLimits(minLimitAngle, maxLimitAngle);
 			NeedsExtendedLimits = IsLimitedHinge && (minLimitAngle<=-PI || maxLimitAngle>=PI);
 //			limit.restitution	= 0.0f;
@@ -743,8 +757,9 @@ PintJointHandle SharedPhysX::CreateJoint(PxPhysics& physics, const PINT_JOINT_CR
 					j->setMotion(PxD6Axis::eTWIST, PxD6Motion::eLIMITED);
 					}
 
+#if PHYSX_SUPPORT_JOINT_PROJECTION
 					SetupD6Projection(j, enable_projection, projection_linear_tolerance, projection_angular_tolerance);
-
+#endif
 					if(jc.mUseMotor)
 					{
 						const PxD6JointDrive drive(gHingeDriveStiffness, gHingeDriveDamping, gHingeDriveForceLimit, gHingeDriveIsAcceleration);
@@ -771,12 +786,13 @@ PintJointHandle SharedPhysX::CreateJoint(PxPhysics& physics, const PINT_JOINT_CR
 						j->setRevoluteJointFlag(PxRevoluteJointFlag::eLIMIT_ENABLED, true);
 					}
 
+#if PHYSX_SUPPORT_JOINT_PROJECTION
 					if(enable_projection)
 					{
 						j->setProjectionLinearTolerance(projection_linear_tolerance);
 						j->setProjectionAngularTolerance(projection_angular_tolerance);
 					}
-
+#endif
 					if(jc.mUseMotor)
 					{
 						j->setRevoluteJointFlag(PxRevoluteJointFlag::eDRIVE_ENABLED, true);
@@ -828,7 +844,9 @@ PintJointHandle SharedPhysX::CreateJoint(PxPhysics& physics, const PINT_JOINT_CR
 				if(j)
 				{
 					CreatedJoint = j;
+#if PHYSX_SUPPORT_JOINT_PROJECTION
 					SetupD6Projection(j, enable_projection, projection_linear_tolerance, projection_angular_tolerance);
+#endif
 				}
 			}
 			else
@@ -888,7 +906,11 @@ PintJointHandle SharedPhysX::CreateJoint(PxPhysics& physics, const PINT_JOINT_CR
 							if(jc.mSpring.mStiffness==0.0f && jc.mSpring.mDamping==0.0f)
 							{
 								//### these hard joints are better looking against limits but don't support "springs", at least in this form
-								Limits = PxJointLinearLimitPair(PxTolerancesScale(), MinLimit, MaxLimit, ContactDistance);
+								Limits = PxJointLinearLimitPair(PxTolerancesScale(), MinLimit, MaxLimit
+#if PHYSX_SUPPORT_JOINT_CONTACT_DISTANCE
+									, ContactDistance
+#endif
+								);
 							}
 
 
@@ -920,7 +942,9 @@ PintJointHandle SharedPhysX::CreateJoint(PxPhysics& physics, const PINT_JOINT_CR
 
 					}
 
+#if PHYSX_SUPPORT_JOINT_PROJECTION
 					SetupD6Projection(j, enable_projection, projection_linear_tolerance, projection_angular_tolerance);
+#endif
 				}
 			}
 			else
@@ -1000,7 +1024,11 @@ PintJointHandle SharedPhysX::CreateJoint(PxPhysics& physics, const PINT_JOINT_CR
 					if(jc.mMinTwist<jc.mMaxTwist)
 					{
 						j->setMotion(PxD6Axis::eTWIST, PxD6Motion::eLIMITED);
-						const PxJointAngularLimitPair Limits(jc.mMinTwist, jc.mMaxTwist, ContactDistance);
+						const PxJointAngularLimitPair Limits(jc.mMinTwist, jc.mMaxTwist
+#if PHYSX_SUPPORT_JOINT_CONTACT_DISTANCE
+							, ContactDistance
+#endif
+						);
 	//					const PxJointAngularLimitPair Limits(jc.mMinTwist, jc.mMaxTwist);
 						j->setTwistLimit(Limits);
 					}
@@ -1030,7 +1058,11 @@ PintJointHandle SharedPhysX::CreateJoint(PxPhysics& physics, const PINT_JOINT_CR
 							MaxSwingZ = 0.0f;
 
 	//					j->setSwingLimit(PxJointLimitCone(MaxSwingY, MaxSwingZ));
-						j->setSwingLimit(PxJointLimitCone(MaxSwingY, MaxSwingZ, ContactDistance));
+						j->setSwingLimit(PxJointLimitCone(MaxSwingY, MaxSwingZ
+#if PHYSX_SUPPORT_JOINT_CONTACT_DISTANCE
+							, ContactDistance
+#endif
+						));
 	//					j->setSwingLimit(PxJointLimitCone(MaxSwingY, MaxSwingZ, 0.0f));
 	//					j->setSwingLimit(PxJointLimitCone(MaxSwingY, MaxSwingZ, PxSpring(100.0f, 10.0f)));
 					}
@@ -1059,7 +1091,11 @@ PintJointHandle SharedPhysX::CreateJoint(PxPhysics& physics, const PINT_JOINT_CR
 
 	#ifdef NEW_D6_API
 							//const PxJointLinearLimitPair Limits(MinLimit, MaxLimit, PxSpring(500.0f, 30.0f));
-							const PxJointLinearLimitPair Limits(PxTolerancesScale(), MinLimit, MaxLimit, ContactDistance);
+							const PxJointLinearLimitPair Limits(PxTolerancesScale(), MinLimit, MaxLimit
+#if PHYSX_SUPPORT_JOINT_CONTACT_DISTANCE
+								, ContactDistance
+#endif
+							);
 							j->setLinearLimit(Axis, Limits);
 	#endif
 						}
@@ -1225,7 +1261,9 @@ PintJointHandle SharedPhysX::CreateJoint(PxPhysics& physics, const PINT_JOINT_CR
 #endif
 		CreatedJoint->setConstraintFlag(PxConstraintFlag::eCOLLISION_ENABLED, gEnableCollisionBetweenJointed);
 		CreatedJoint->setConstraintFlag(PxConstraintFlag::eVISUALIZATION, true);
+#if PHYSX_SUPPORT_JOINT_PROJECTION
 		CreatedJoint->setConstraintFlag(PxConstraintFlag::ePROJECTION, enable_projection);
+#endif
 #if PHYSX_SUPPORT_DISABLE_PREPROCESSING
 		const bool disable_preprocessing = mParams.mDisablePreprocessing;
 		CreatedJoint->setConstraintFlag(PxConstraintFlag::eDISABLE_PREPROCESSING, disable_preprocessing);
@@ -2341,7 +2379,8 @@ void SharedPhysX::SetWorldAngularVelocity(PintActorHandle handle, const Point& a
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static Point GetLocalVelocity(PintActorHandle handle, bool angular)
+template<const bool angular>
+static Point GetLocalVelocity(PintActorHandle handle)
 {
 	PxRigidBody* RigidBody = PhysX3::GetRigidBody(handle);
 	if(RigidBody)
@@ -2359,12 +2398,12 @@ static Point GetLocalVelocity(PintActorHandle handle, bool angular)
 
 Point SharedPhysX::GetAngularVelocity(PintActorHandle handle)
 {
-	return GetLocalVelocity(handle, true);
+	return GetLocalVelocity<true>(handle);
 }
 
 Point SharedPhysX::GetLinearVelocity(PintActorHandle handle)
 {
-	return GetLocalVelocity(handle, false);
+	return GetLocalVelocity<false>(handle);
 }
 
 static void SetLocalVelocity(PintActorHandle handle, const Point& local_velocity, bool angular)
@@ -3142,7 +3181,15 @@ PxCustomGeometryExt::CylinderCallbacks* CustomCylinder = (PxCustomGeometryExt::C
 //ASSERT(cb->getCustomType() == PxCustomGeometryExt::CylinderData::CUSTOM_TYPE);
 //const PxCustomGeometryExt::CylinderData* CustomCylinder = cb->get<PxCustomGeometryExt::CylinderData>();
 
-	PxShape* S = reinterpret_cast<PxShape*>(mCylinderShapes.FindShape(CustomCylinder->radius, CustomCylinder->height, &material, create->mRenderer, ToPR(local_pose), collision_group));
+#if PHYSX_SUPPORT_CUSTOM_GEOMETRY_PUBLIC_MEMBERS
+	const float radius = CustomCylinder->radius;
+	const float height = CustomCylinder->height;
+#else
+	const float radius = CustomCylinder->getRadius();
+	const float height = CustomCylinder->getHeight();
+#endif
+
+	PxShape* S = reinterpret_cast<PxShape*>(mCylinderShapes.FindShape(radius, height, &material, create->mRenderer, ToPR(local_pose), collision_group));
 	if(S)
 	{
 		//printf("Sharing shape\n");
@@ -3152,7 +3199,7 @@ PxCustomGeometryExt::CylinderCallbacks* CustomCylinder = (PxCustomGeometryExt::C
 
 	PxShape* NewShape = CreateSharedShape(*this, mPhysics, create, actor, geometry, material, local_pose, collision_group, mParams);
 
-	mCylinderShapes.RegisterShape(CustomCylinder->radius, CustomCylinder->height, NewShape, &material, create->mRenderer, ToPR(local_pose), collision_group);
+	mCylinderShapes.RegisterShape(radius, height, NewShape, &material, create->mRenderer, ToPR(local_pose), collision_group);
 	return NewShape;
 }
 #endif
@@ -3394,12 +3441,7 @@ PintAggregateHandle SharedPhysX::CreateAggregate(udword max_size, bool enable_se
 {
 	ASSERT(mPhysics);
 	// TODO: where are these released?
-/*#if PHYSX_SUPPORT_GPU_AGGREGATES
-	// Assumes single-shape actors to avoid updating the PEEL API for now
-	PxAggregate* Aggregate = mPhysics->createAggregate(max_size, max_size, enable_self_collision);
-#else*/
-	PxAggregate* Aggregate = mPhysics->createAggregate(max_size, enable_self_collision);
-//#endif
+	PxAggregate* Aggregate = mPhysics->createAggregate(PHYSX_CREATE_AGGREGATE_PARAMS);
 	return PintAggregateHandle(Aggregate);
 }
 
@@ -3640,6 +3682,11 @@ PxQueryHitType::Enum SharedPhysX::preFilter(const PxFilterData& filterData, cons
 	return PxQueryHitType::eBLOCK;
 }
 
+PxQueryHitType::Enum SharedPhysX::postFilter(const PxFilterData& filterData, const PxQueryHit& hit, const PxShape* shape, const PxRigidActor* actor)
+{
+	return PxQueryHitType::eBLOCK;
+}
+
 PxQueryHitType::Enum SharedPhysX::postFilter(const PxFilterData& filterData, const PxQueryHit& hit)
 {
 	return PxQueryHitType::eBLOCK;
@@ -3686,21 +3733,32 @@ static			bool	gVisualizeMBPRegions		= false;
 
 static void RenderShapeGeneric(PintRender& renderer, PxShape* shape, const PR& IcePose)
 {
+#if PHYSX_SUPPORT_DIRECT_SHAPE_GET_GEOMETRY
+	const PxGeometry& shapeGeom = shape->getGeometry();
+	const PxGeometryType::Enum geomType = shapeGeom.getType();
+#else
 	const PxGeometryType::Enum geomType = shape->getGeometryType();
+#endif
 	if(geomType==PxGeometryType::eSPHERE)
 	{
+#if PHYSX_SUPPORT_DIRECT_SHAPE_GET_GEOMETRY
+		const PxSphereGeometry& geometry = static_cast<const PxSphereGeometry&>(shapeGeom);
+#else
 		PxSphereGeometry geometry;
 		bool status = shape->getSphereGeometry(geometry);
 		ASSERT(status);
-
+#endif
 		renderer.DrawSphere(geometry.radius, IcePose);
 	}
 	else if(geomType==PxGeometryType::eBOX)
 	{
+#if PHYSX_SUPPORT_DIRECT_SHAPE_GET_GEOMETRY
+		const PxBoxGeometry& geometry = static_cast<const PxBoxGeometry&>(shapeGeom);
+#else
 		PxBoxGeometry geometry;
 		bool status = shape->getBoxGeometry(geometry);
 		ASSERT(status);
-
+#endif
 		renderer.DrawBox(ToPoint(geometry.halfExtents), IcePose);
 	}
 	else if(geomType==PxGeometryType::eCAPSULE)
@@ -3729,7 +3787,12 @@ static inline_ void RenderShape(PintRender& renderer, PxShape* shape, const PxTr
 	if(shape->userData)
 	{
 		PintShapeRenderer* shapeRenderer = reinterpret_cast<PintShapeRenderer*>(shape->userData);
-		if(shape->getGeometryType()!=PxGeometryType::eCAPSULE)	// ### VCALL
+#if PHYSX_SUPPORT_DIRECT_SHAPE_GET_GEOMETRY
+		const PxGeometryType::Enum geomType = shape->getGeometry().getType();	// ### VCALL
+#else
+		const PxGeometryType::Enum geomType = shape->getGeometryType();	// ### VCALL
+#endif
+		if(geomType!=PxGeometryType::eCAPSULE)
 		{
 //			shapeRenderer->Render(IcePose);
 			renderer.DrawShape(shapeRenderer, IcePose);
@@ -3744,6 +3807,36 @@ static inline_ void RenderShape(PintRender& renderer, PxShape* shape, const PxTr
 	}
 	// Reactivated for internal XPs
 	else RenderShapeGeneric(renderer, shape, IcePose);
+}
+
+// Version hardcoded for 6 planes and without out-clip-mask
+static PX_FORCE_INLINE bool testPlane(const PxVec3& d, const PxVec3& m, const Plane* p)
+{
+    const float NP = d.x*fabsf(p->n.x) + d.y*fabsf(p->n.y) + d.z*fabsf(p->n.z);
+    const float MP = m.x*p->n.x + m.y*p->n.y + m.z*p->n.z + p->d;
+    return NP < MP;
+}
+
+static PX_FORCE_INLINE bool planesAABBOverlap(const PxBounds3& a, const Plane* p)
+{
+	const PxVec3 m = a.getCenter();
+	const PxVec3 d = a.maximum - m;
+
+    // PT: TODO: could use SIMD for the first 4 planes
+    if(testPlane(d, m, p++))
+        return false;
+    if(testPlane(d, m, p++))
+        return false;
+    if(testPlane(d, m, p++))
+        return false;
+    if(testPlane(d, m, p++))
+        return false;
+    if(testPlane(d, m, p++))
+        return false;
+    if(testPlane(d, m, p++))
+        return false;
+
+	return true;
 }
 
 void SharedPhysX::Render(PintRender& renderer, PintRenderPass render_pass)
@@ -3810,8 +3903,9 @@ void SharedPhysX::Render(PintRender& renderer, PintRenderPass render_pass)
 #else
 						const PxBounds3 ActorBounds = rigidActor->getWorldBounds();
 #endif
-						udword OutClipMask;
-						if(!PlanesAABBOverlap((const AABB&)ActorBounds, FrustumPlanes, OutClipMask, (1<<6)-1))
+						//udword OutClipMask;
+						//if(!PlanesAABBOverlap((const AABB&)ActorBounds, FrustumPlanes, OutClipMask, (1<<6)-1))
+						if(!planesAABBOverlap(ActorBounds, FrustumPlanes))
 							continue;
 						nbVisibleActors++;
 					}
@@ -4347,6 +4441,9 @@ enum PhysXGUIElement
 #if PHYSX_SUPPORT_PX_BROADPHASE_TYPE
 	PHYSX_GUI_BROAD_PHASE,
 #endif
+#if PHYSX_SUPPORT_CPU_DISPATCHER_MODE
+	PHYSX_GUI_CPU_DISPATCHER,
+#endif
 	PHYSX_GUI_SCRATCH_BUFFER,
 	//
 //	PHYSX_GUI_NUM_16K_CONTACT_DATA_BLOCKS,
@@ -4366,9 +4463,13 @@ enum PhysXGUIElement
 	PHYSX_GUI_ENABLE_JOINT_32_COMPATIBILITY,
 	#endif
 #endif
+#if PHYSX_SUPPORT_JOINT_PROJECTION
 	PHYSX_GUI_ENABLE_JOINT_PROJECTION,
+#endif
+#if PHYSX_SUPPORT_JOINT_CONTACT_DISTANCE
 //	PHYSX_GUI_ENABLE_JOINT_CONTACT_DISTANCE,
 	PHYSX_GUI_LIMITS_CONTACT_DISTANCE,
+#endif
 #if PHYSX_SUPPORT_ARTICULATIONS || PHYSX_SUPPORT_RCA
 	PHYSX_GUI_DISABLE_ARTICULATIONS,
 #endif
@@ -4427,6 +4528,9 @@ EditableParams::EditableParams() :
 	#endif
 	mMBPSubdivLevel				(4),
 	mMBPRange					(1000.0f),
+#endif
+#if PHYSX_SUPPORT_CPU_DISPATCHER_MODE
+	mCPUDispatcherMode			(PxDefaultCpuDispatcherWaitForWorkMode::eWAIT_FOR_WORK),
 #endif
 	mEnableCCD					(false),
 #if PHYSX_SUPPORT_ANGULAR_CCD
@@ -4527,8 +4631,12 @@ EditableParams::EditableParams() :
 	mSQPreciseSweeps			(false),
 	mSQBothSides				(false),
 	// Joints
+#if PHYSX_SUPPORT_JOINT_PROJECTION
 	mEnableJointProjection		(false),
+#endif
+#if PHYSX_SUPPORT_JOINT_CONTACT_DISTANCE
 //	mEnableJointContactDistance	(false),
+#endif
 	mUseD6Joint					(false),
 #if PHYSX_SUPPORT_DISABLE_PREPROCESSING
 	mDisablePreprocessing		(false),
@@ -4548,7 +4656,9 @@ EditableParams::EditableParams() :
 #ifdef PHYSX_SUPPORT_LINEAR_COEFF
 	mLinearCoeff				(0.0f),
 #endif
+#if PHYSX_SUPPORT_JOINT_CONTACT_DISTANCE
 	mLimitsContactDistance		(0),
+#endif
 	// Articulations
 #if PHYSX_SUPPORT_ARTICULATIONS || PHYSX_SUPPORT_RCA
 	mDisableArticulations		(false),
@@ -4655,7 +4765,9 @@ const EditableParams& PhysX3::GetEditableParams()
 		ComboBoxPtr		mComboBox_NbThreads;
 		ComboBoxPtr		mComboBox_StaticPruner;
 		ComboBoxPtr		mComboBox_DynamicPruner;
+#if PHYSX_SUPPORT_JOINT_CONTACT_DISTANCE
 		ComboBoxPtr		mComboBox_LimitsContactDistance;
+#endif
 #if PHYSX_SUPPORT_SCRATCH_BUFFER
 		ComboBoxPtr		mComboBox_ScratchSize;
 #endif
@@ -4663,6 +4775,9 @@ const EditableParams& PhysX3::GetEditableParams()
 		ComboBoxPtr		mComboBox_BroadPhase;
 		EditBoxPtr		mEditBox_MBPSubdivLevel;
 		EditBoxPtr		mEditBox_MBPRange;
+#endif
+#if PHYSX_SUPPORT_CPU_DISPATCHER_MODE
+		ComboBoxPtr		mComboBox_CPUDispatcher;
 #endif
 #if PHYSX_SUPPORT_PX_MESH_MIDPHASE
 		ComboBoxPtr		mComboBox_MidPhase;
@@ -4860,11 +4975,13 @@ void PhysX3::GetOptionsFromGUI(const char* test_name)
 		gParams.mDynamicPruner = PxPruningStructureType::Enum(Index);
 	}
 
+#if PHYSX_SUPPORT_JOINT_CONTACT_DISTANCE
 	if(gPhysXUI->mComboBox_LimitsContactDistance)
 	{
 		const udword Index = gPhysXUI->mComboBox_LimitsContactDistance->GetSelectedIndex();
 		gParams.mLimitsContactDistance = Index;
 	}
+#endif
 
 #if PHYSX_SUPPORT_SCRATCH_BUFFER
 	if(gPhysXUI->mComboBox_ScratchSize)
@@ -4879,6 +4996,14 @@ void PhysX3::GetOptionsFromGUI(const char* test_name)
 	{
 		const udword Index = gPhysXUI->mComboBox_BroadPhase->GetSelectedIndex();
 		gParams.mBroadPhaseType = PxBroadPhaseType::Enum(Index);
+	}
+#endif
+
+#if PHYSX_SUPPORT_CPU_DISPATCHER_MODE
+	if(gPhysXUI->mComboBox_CPUDispatcher)
+	{
+		const udword Index = gPhysXUI->mComboBox_CPUDispatcher->GetSelectedIndex();
+		gParams.mCPUDispatcherMode = PxDefaultCpuDispatcherWaitForWorkMode::Enum(Index);
 	}
 #endif
 
@@ -5144,7 +5269,26 @@ void PhysX3::GetOptionsFromGUI(const char* test_name)
 	}
 }
 
+void PhysX3::GetOptionsFromOverride(PintOverride* overrideParams)
+{
+	if(overrideParams)
+	{
+		if(overrideParams->mNbIter!=INVALID_ID)
+			gParams.mSolverIterationCountPos = overrideParams->mNbIter;
+
+		if(overrideParams->mSleeping!=INVALID_ID)
+			gParams.mEnableSleeping = overrideParams->mSleeping!=0;
+
+#ifdef PHYSX_SUPPORT_GPU
+		if(overrideParams->mUseGPU!=INVALID_ID)
+			gParams.mUseGPU = overrideParams->mUseGPU!=0;
+#endif
+	}
+}
+
 #if PHYSX_SUPPORT_PX_BROADPHASE_TYPE
+namespace
+{
 	// ### would be easier to use a callback here
 	class BPComboBox : public IceComboBox
 	{
@@ -5165,6 +5309,7 @@ void PhysX3::GetOptionsFromGUI(const char* test_name)
 			}
 		}
 	};
+}
 #endif
 
 static void gCheckBoxCallback(const IceCheckBox& check_box, bool checked, void* user_data)
@@ -5197,6 +5342,7 @@ static void gCheckBoxCallback(const IceCheckBox& check_box, bool checked, void* 
 			break;
 	#endif
 #endif
+#if PHYSX_SUPPORT_JOINT_PROJECTION
 		case PHYSX_GUI_ENABLE_JOINT_PROJECTION:
 			gParams.mEnableJointProjection = checked;
 			if(gPhysXUI->mEditBox_ProjectionLinearTolerance)
@@ -5204,11 +5350,12 @@ static void gCheckBoxCallback(const IceCheckBox& check_box, bool checked, void* 
 			if(gPhysXUI->mEditBox_ProjectionAngularTolerance)
 				gPhysXUI->mEditBox_ProjectionAngularTolerance->SetEnabled(checked);
 			break;
-
+#endif
+#if PHYSX_SUPPORT_JOINT_CONTACT_DISTANCE
 /*		case PHYSX_GUI_ENABLE_JOINT_CONTACT_DISTANCE:
 			gParams.mEnableJointContactDistance = checked;
 			break;*/
-
+#endif
 		case PHYSX_GUI_TEST:
 			gTest = checked;
 			break;
@@ -5482,7 +5629,7 @@ IceWindow* PhysX3::InitSharedGUI(IceWidget* parent, PintGUIHelper& helper, UICal
 	const sdword YStart = 4;
 	sdword y = YStart;
 
-	const sdword OffsetX = 90;
+	const sdword OffsetX = 110;
 	const sdword LabelOffsetY = 2;
 
 	const sdword EditBoxWidth = 60;
@@ -5589,7 +5736,17 @@ IceWindow* PhysX3::InitSharedGUI(IceWidget* parent, PintGUIHelper& helper, UICal
 			gPhysXUI->mComboBox_BroadPhase->Select(gParams.mBroadPhaseType);
 			y += YStep;
 #endif
+
+#if PHYSX_SUPPORT_CPU_DISPATCHER_MODE
+			helper.CreateLabel(TabWindow, 4, y+LabelOffsetY, 110, 20, "CPU dispatcher mode:", gPhysXUI->mPhysXGUI);
+			gPhysXUI->mComboBox_CPUDispatcher = CreateComboBox<IceComboBox>(TabWindow, PHYSX_GUI_CPU_DISPATCHER, 4+OffsetX, y, 150, 20, "CPU dispatcher:", gPhysXUI->mPhysXGUI, null);
+			gPhysXUI->mComboBox_CPUDispatcher->Add("eWAIT_FOR_WORK");
+			gPhysXUI->mComboBox_CPUDispatcher->Add("eYIELD_THREAD");
+			gPhysXUI->mComboBox_CPUDispatcher->Add("eYIELD_PROCESSOR");
+			gPhysXUI->mComboBox_CPUDispatcher->Select(gParams.mCPUDispatcherMode);
 			y += YStep;
+#endif
+//			y += YStep;
 
 			{
 				gPhysXUI->mCheckBox_CCD = helper.CreateCheckBox(TabWindow, PHYSX_GUI_ENABLE_CCD, 4, y, CheckBoxWidth, 20, "Enable CCD", gPhysXUI->mPhysXGUI, gParams.mEnableCCD, gCheckBoxCallback);
@@ -5690,9 +5847,9 @@ IceWindow* PhysX3::InitSharedGUI(IceWidget* parent, PintGUIHelper& helper, UICal
 			const udword x3 = 200;
 			y += YStep;
 
-			static const char* ConfigDesc0 = "4 solver iterations, single-threaded,\nno substeps, sleeping disabled.";
-			static const char* ConfigDesc1 = "4 solver iterations, multi-threaded,\nno substeps, sleeping enabled.";
-			static const char* ConfigDesc2 = "32 solver iterations, multi-threaded,\n2 substeps, sleeping enabled.";
+			static const char* ConfigDesc0 = "4 solver iterations, single-threaded,\nno substeps, sleeping disabled,\ngentle dispatcher.";
+			static const char* ConfigDesc1 = "4 solver iterations, multi-threaded,\nno substeps, sleeping enabled,\naggressive dispatcher.";
+			static const char* ConfigDesc2 = "32 solver iterations, multi-threaded,\n2 substeps, sleeping enabled,\naggressive dispatcher.";
 
 			class ConfigComboBox : public IceComboBox
 			{
@@ -5722,6 +5879,10 @@ IceWindow* PhysX3::InitSharedGUI(IceWidget* parent, PintGUIHelper& helper, UICal
 //											gParams.mTGS = false;
 //											gPhysXUI->mCheckBox_TGS->SetChecked(gParams.mTGS);
 #endif
+#if PHYSX_SUPPORT_CPU_DISPATCHER_MODE
+											gParams.mCPUDispatcherMode = PxDefaultCpuDispatcherWaitForWorkMode::eWAIT_FOR_WORK;
+											gPhysXUI->mComboBox_CPUDispatcher->Select(gParams.mCPUDispatcherMode);
+#endif
 											gPhysXUI->mEditBox_ConfigDesc->SetMultilineText(ConfigDesc0);
 										}
 										else if(SelectedIndex==1)
@@ -5736,6 +5897,10 @@ IceWindow* PhysX3::InitSharedGUI(IceWidget* parent, PintGUIHelper& helper, UICal
 //											gParams.mTGS = false;
 //											gPhysXUI->mCheckBox_TGS->SetChecked(gParams.mTGS);
 #endif
+#if PHYSX_SUPPORT_CPU_DISPATCHER_MODE
+											gParams.mCPUDispatcherMode = PxDefaultCpuDispatcherWaitForWorkMode::eYIELD_THREAD;
+											gPhysXUI->mComboBox_CPUDispatcher->Select(gParams.mCPUDispatcherMode);
+#endif
 											gPhysXUI->mEditBox_ConfigDesc->SetMultilineText(ConfigDesc1);
 										}
 										else if(SelectedIndex==2)
@@ -5749,6 +5914,10 @@ IceWindow* PhysX3::InitSharedGUI(IceWidget* parent, PintGUIHelper& helper, UICal
 #if PHYSX_SUPPORT_TGS
 //											gParams.mTGS = true;
 //											gPhysXUI->mCheckBox_TGS->SetChecked(gParams.mTGS);
+#endif
+#if PHYSX_SUPPORT_CPU_DISPATCHER_MODE
+											gParams.mCPUDispatcherMode = PxDefaultCpuDispatcherWaitForWorkMode::eYIELD_THREAD;
+											gPhysXUI->mComboBox_CPUDispatcher->Select(gParams.mCPUDispatcherMode);
 #endif
 											gPhysXUI->mEditBox_ConfigDesc->SetMultilineText(ConfigDesc2);
 										}
@@ -5894,20 +6063,24 @@ IceWindow* PhysX3::InitSharedGUI(IceWidget* parent, PintGUIHelper& helper, UICal
 			y += YStepCB;
 	#endif
 #endif
+#if PHYSX_SUPPORT_JOINT_PROJECTION
 			helper.CreateCheckBox(TabWindow, PHYSX_GUI_ENABLE_JOINT_PROJECTION, xj, y, CheckBoxWidth, 20, "Enable joint projection", gPhysXUI->mPhysXGUI, gParams.mEnableJointProjection, gCheckBoxCallback);
 //			y += YStepCB;
-
+#endif
+#if PHYSX_SUPPORT_JOINT_CONTACT_DISTANCE
 //			helper.CreateCheckBox(TabWindow, PHYSX_GUI_ENABLE_JOINT_CONTACT_DISTANCE, xj, y, CheckBoxWidth, 20, "Enable contact distance (for limits)", gPhysXUI->mPhysXGUI, gParams.mEnableJointContactDistance, gCheckBoxCallback);
 //			y += YStepCB;
-
+#endif
 			y += YStep;
 
 			const sdword LabelWidthJ = 150;
+#if PHYSX_SUPPORT_JOINT_PROJECTION
 			gPhysXUI->mEditBox_ProjectionLinearTolerance = CreateEditBox(helper, TabWindow, xj, y, "Projection linear tolerance:", helper.Convert(gParams.mProjectionLinearTolerance), EDITBOX_FLOAT_POSITIVE, LabelWidthJ, LabelWidthJ);
 			gPhysXUI->mEditBox_ProjectionLinearTolerance->SetEnabled(gParams.mEnableJointProjection);
 
 			gPhysXUI->mEditBox_ProjectionAngularTolerance = CreateEditBox(helper, TabWindow, xj, y, "Projection angular tolerance:", helper.Convert(gParams.mProjectionAngularTolerance), EDITBOX_FLOAT_POSITIVE, LabelWidthJ, LabelWidthJ);
 			gPhysXUI->mEditBox_ProjectionAngularTolerance->SetEnabled(gParams.mEnableJointProjection);
+#endif
 
 #ifndef IS_PHYSX_3_2
 			gPhysXUI->mEditBox_InverseInertiaScale = CreateEditBox(helper, TabWindow, xj, y, "Inverse inertia scale:", helper.Convert(gParams.mInverseInertiaScale), EDITBOX_FLOAT_POSITIVE, LabelWidthJ, LabelWidthJ);
@@ -5918,6 +6091,7 @@ IceWindow* PhysX3::InitSharedGUI(IceWidget* parent, PintGUIHelper& helper, UICal
 			gPhysXUI->mEditBox_LinearCoeff = CreateEditBox(helper, TabWindow, xj, y, "Linear coefficient:", helper.Convert(gParams.mLinearCoeff), EDITBOX_FLOAT_POSITIVE, LabelWidthJ, LabelWidthJ);
 #endif
 
+#if PHYSX_SUPPORT_JOINT_CONTACT_DISTANCE
 			{
 				helper.CreateLabel(TabWindow, 4, y+LabelOffsetY, 90, 20, "Contact distance:", gPhysXUI->mPhysXGUI);
 				gPhysXUI->mComboBox_LimitsContactDistance = CreateComboBox<IceComboBox>(TabWindow, PHYSX_GUI_LIMITS_CONTACT_DISTANCE, 4+OffsetX, y, 150, 20, "Limits contact distance", gPhysXUI->mPhysXGUI, null);
@@ -5927,7 +6101,7 @@ IceWindow* PhysX3::InitSharedGUI(IceWidget* parent, PintGUIHelper& helper, UICal
 				gPhysXUI->mComboBox_LimitsContactDistance->Select(gParams.mLimitsContactDistance);
 				y += YStep;
 			}
-
+#endif
 			y += YStep;
 
 			{
